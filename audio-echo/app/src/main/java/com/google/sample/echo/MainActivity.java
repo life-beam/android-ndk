@@ -18,6 +18,7 @@ package com.google.sample.echo;
 
 import android.Manifest;
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.media.AudioFormat;
@@ -33,15 +34,20 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.sample.echo.BluetoothScoConnector.OnScoAttemptedListener;
+
 public class MainActivity extends Activity
         implements ActivityCompat.OnRequestPermissionsResultCallback {
     private static final int AUDIO_ECHO_REQUEST = 0;
+
     Button   controlButton;
     TextView statusView;
     String  nativeSampleRate;
     String  nativeSampleBufSize;
     boolean supportRecording;
     Boolean isPlaying = false;
+
+    BluetoothScoConnector bluetoothScoConnector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +62,14 @@ public class MainActivity extends Activity
         if (supportRecording) {
             createSLEngine(Integer.parseInt(nativeSampleRate), Integer.parseInt(nativeSampleBufSize));
         }
+
+        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        if (audioManager == null) {
+            throw new IllegalStateException("Couldn't get AudioManager.");
+        }
+
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        bluetoothScoConnector = new BluetoothScoConnector(this, audioManager, bluetoothAdapter);
     }
     @Override
     protected void onDestroy() {
@@ -105,9 +119,17 @@ public class MainActivity extends Activity
                 statusView.setText(getString(R.string.error_recorder));
                 return;
             }
-            startPlay();   // this must include startRecording()
-            statusView.setText(getString(R.string.status_echoing));
+
+            bluetoothScoConnector.startBluetoothSco(new OnScoAttemptedListener() {
+                @Override
+                public void onBluetoothScoAttempted(boolean succeeded) {
+                    startPlay();   // this must include startRecording()
+                    statusView.setText(getString(R.string.status_echoing));
+                }
+            });
         } else {
+            bluetoothScoConnector.stopBluetoothSco();
+
             stopPlay();  //this must include stopRecording()
             updateNativeAudioUI();
             deleteAudioRecorder();

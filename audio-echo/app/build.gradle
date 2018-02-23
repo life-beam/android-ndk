@@ -5,6 +5,7 @@ android {
 
     defaultConfig {
         applicationId 'com.google.sample.echo'
+        buildToolsVersion '26.0.3'
         /*
            To run on earlier version of Android than android-21, do:
              *) set this minSDKVersion and cmake's ANDROID_PLATFORM to your version
